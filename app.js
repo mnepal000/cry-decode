@@ -569,3 +569,11 @@ if (!("mediaDevices" in navigator) || !navigator.mediaDevices.getUserMedia) {
   recordBtn.style.opacity = "0.5";
   showError("This browser cannot access the microphone. You can still upload an audio file to analyze.");
 }
+
+// Offline support: cache the app shell on first visit so CryDecode keeps
+// working without internet. Silent if the browser does not support it.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
+  });
+}
