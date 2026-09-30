@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FBF6EF">
+<meta name="description" content="CryDecode: a listening helper that analyzes your newborn's cry patterns and suggests what your baby might need. 100% on-device, private by design.">
+<title>CryDecode, understand your baby's cries</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23E07856'/%3E%3Cg stroke='%23FFF6EC' stroke-width='4' stroke-linecap='round'%3E%3Cline x1='14' y1='26' x2='14' y2='38'/%3E%3Cline x1='24' y1='20' x2='24' y2='44'/%3E%3Cline x1='34' y1='14' x2='34' y2='50'/%3E%3Cline x1='44' y1='22' x2='44' y2='42'/%3E%3Cline x1='52' y1='28' x2='52' y2='36'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="30" height="30"><rect width="64" height="64" rx="14" fill="#E07856"/><g stroke="#FFF6EC" stroke-width="4" stroke-linecap="round"><line x1="14" y1="26" x2="14" y2="38"/><line x1="24" y1="20" x2="24" y2="44"/><line x1="34" y1="14" x2="34" y2="50"/><line x1="44" y1="22" x2="44" y2="42"/><line x1="52" y1="28" x2="52" y2="36"/></g></svg>
+    </span>
+    <div>
+      <h1>CryDecode</h1>
+      <p>A listening helper for newborn cries</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ DECODE ============ -->
+  <section id="tab-decode" class="tab active" aria-label="Decode a cry">
+    <div class="card intro-card">
+      <p class="lede">Record your baby's cry and CryDecode will analyze its sound patterns, pitch, rhythm and intensity, and suggest what your baby might need.</p>
+      <p class="honest">It is a pattern match, not a diagnosis. You know your baby best.</p>
+    </div>
+
+    <div class="card record-card">
+      <div class="record-wrap">
+        <button id="record-btn" class="record-btn" aria-label="Start recording">
+          <svg id="record-icon" viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 1 0-7 0v5A3.5 3.5 0 0 0 12 15zm6-3.5a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.94V22h2v-2.06A8 8 0 0 0 20 11.5h-2z"/></svg>
+        </button>
+        <div id="record-status" class="record-status">Tap to record</div>
+        <div id="record-timer" class="record-timer" hidden>0:00</div>
+        <canvas id="level-meter" width="260" height="36" hidden aria-hidden="true"></canvas>
+      </div>
+      <p class="hint">Hold your phone about an arm's length away. 5 to 15 seconds of crying is plenty. Recording stops automatically at 60 seconds.</p>
+      <div class="upload-row">
+        <label class="linklike" for="file-input">Or upload an audio file instead</label>
+        <input type="file" id="file-input" accept="audio/*" hidden>
+      </div>
+      <p id="record-error" class="error" hidden></p>
+    </div>
+
+    <div id="analyzing" class="card analyzing" hidden>
+      <div class="pulse-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p>Listening to the patterns in the cry&hellip;</p>
+    </div>
+
+    <div id="results" hidden></div>
+
+    <div class="card basics-card">
+      <h2>When in doubt, check the basics</h2>
+      <p>Most cries resolve to a short list. Run through it any time.</p>
+      <button id="checklist-open" class="btn btn-secondary">Open the basics checklist</button>
+    </div>
+
+    <details class="card about-card">
+      <summary>How it works, privacy and sources</summary>
+      <div class="about-body">
+        <h3>How it works</h3>
+        <p>CryDecode measures the cry the way researchers do: fundamental pitch and its range, how the pitch moves (rising, falling, wavering), loudness dynamics, the rhythm of cry bursts and pauses, and voice harshness. It compares those measurements against acoustic patterns described in infant cry research and the popular Dunstan five-sound framework, then shows the closest matches with the reasons.</p>
+        <h3>Privacy</h3>
+        <p>Everything happens on your device. The microphone is only active while you record, audio is never uploaded anywhere, and your diary is stored only in this browser. There is no account and no server.</p>
+        <h3>Honesty</h3>
+        <p>No app can translate a cry with certainty, including this one. The Dunstan Baby Language is popular and many parents find it useful, but a 2023 study could not validate it scientifically. Treat every suggestion here as a clue to check against what you see: the clock, the diaper, the room, your baby's body.</p>
+        <h3>Sources</h3>
+        <ul class="sources">
+          <li><a href="https://www.mdpi.com/2504-4990/8/3/76" target="_blank" rel="noopener">Review of deep learning approaches for pain assessment in infant cry sounds (MDPI)</a></li>
+          <li><a href="https://en.wikipedia.org/wiki/Dunstan_Baby_Language" target="_blank" rel="noopener">Dunstan Baby Language, Wikipedia</a></li>
+          <li><a href="https://www.whattoexpect.com/first-year/dunstan-baby-language" target="_blank" rel="noopener">What to Expect on Dunstan Baby Language</a></li>
+          <li><a href="https://www.healthline.com/health/baby/dunstan-baby-language" target="_blank" rel="noopener">Healthline on Dunstan Baby Language</a></li>
+        </ul>
+        <p class="disclaimer"><strong>CryDecode is a parenting aid, not a medical device.</strong> If your baby is inconsolable, has a fever, trouble breathing, poor feeding, or you are worried, contact your pediatrician promptly.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ LEARN ============ -->
+  <section id="tab-learn" class="tab" aria-label="Learn the sounds">
+    <div class="card">
+      <h2>The five pre-cry sounds</h2>
+      <p>Before the full wail, newborns (roughly 0 to 3 months) often make small reflex sounds. The <em>Dunstan Baby Language</em> gives them names. Listen for these in the first seconds, before the crying escalates.</p>
+      <p class="honest">Popular with parents, not scientifically proven. Use as listening practice, not as a translator.</p>
+    </div>
+
+    <div class="card sound-card">
+      <div class="sound-head"><span class="sound-chip">neh</span><div><h3>Hungry</h3><p class="sound-sub">The sucking reflex pushes the tongue to the palate</p></div></div>
+      <p><strong>What to listen for:</strong> a repeating, rhythmic cry that starts soft and builds, like a call that expects an answer.</p>
+      <p><strong>Body cues:</strong> rooting toward anything near the cheek, sucking hands or lips, clenched fists.</p>
+      <p><strong>Try:</strong> offer a feed, even if the last one was recent.</p>
+    </div>
+
+    <div class="card sound-card">
+      <div class="sound-head"><span class="sound-chip">owh</span><div><h3>Tired or sleepy</h3><p class="sound-sub">The mouth makes an oval, like a yawn with sound</p></div></div>
+      <p><strong>What to listen for:</strong> lower pitched, wavering, like complaining. The pitch drifts downward as energy fades.</p>
+      <p><strong>Body cues:</strong> yawning, eye rubbing, staring blankly, turning away from stimulation.</p>
+      <p><strong>Try:</strong> dark quiet room, rhythmic rocking. An overtired baby often fights sleep first.</p>
+    </div>
+
+    <div class="card sound-card">
+      <div class="sound-head"><span class="sound-chip">eh</span><div><h3>Needs burping</h3><p class="sound-sub">Air pushing up from the chest</p></div></div>
+      <p><strong>What to listen for:</strong> short, clipped little bursts rather than long wails. Often during or right after a feed.</p>
+      <p><strong>Body cues:</strong> squirming during a feed, pulling away then wanting it back.</p>
+      <p><strong>Try:</strong> pause and burp, over the shoulder or sitting up. Try another position if the first fails.</p>
+    </div>
+
+    <div class="card sound-card">
+      <div class="sound-head"><span class="sound-chip">eairh</span><div><h3>Gas or tummy trouble</h3><p class="sound-sub">Lower wind moving through the belly</p></div></div>
+      <p><strong>What to listen for:</strong> strained, almost growling, effortful. Comes in intense waves with pauses.</p>
+      <p><strong>Body cues:</strong> legs pulled to the belly, arched back, red scrunched face.</p>
+      <p><strong>Try:</strong> bicycle the legs, gentle knee-to-tummy pressure, warm hand on the belly.</p>
+    </div>
+
+    <div class="card sound-card">
+      <div class="sound-head"><span class="sound-chip">heh</span><div><h3>Uncomfortable</h3><p class="sound-sub">A breathy response to physical discomfort</p></div></div>
+      <p><strong>What to listen for:</strong> whiny and on-and-off, shifting when you change something. Harsher or breathier than a clean demand cry.</p>
+      <p><strong>Body cues:</strong> squirming without settling, skin hot or cold, wet diaper.</p>
+      <p><strong>Try:</strong> check diaper, clothing, room temperature and position. Check fingers and toes for a wrapped hair.</p>
+    </div>
+
+    <div class="card">
+      <h2>Your baby's own language</h2>
+      <p>The most reliable decoder is the one you build yourself. Over weeks you will learn <em>your</em> baby's hungry cry versus tired cry. After each decode, save what you tried and whether it worked in the Diary tab. Patterns will emerge, and that diary becomes more accurate than any app.</p>
+    </div>
+  </section>
+
+  <!-- ============ SOOTHE ============ -->
+  <section id="tab-soothe" class="tab" aria-label="Soothing guide">
+    <div class="card">
+      <h2>The 5 S's</h2>
+      <p>Pediatrician Harvey Karp's calming sequence recreates womb sensations. Try them in order, adding each to the last.</p>
+      <ol class="steps">
+        <li><strong>Swaddle.</strong> Snug wrap, arms down. Stops flailing from startling the baby awake.</li>
+        <li><strong>Side or stomach position.</strong> Hold on the side or tummy-down on your forearm. (For holding only. Babies always sleep on their backs.)</li>
+        <li><strong>Shush.</strong> Loud, continuous white-noise shushing near the ear, as loud as the crying.</li>
+        <li><strong>Swing.</strong> Small, quick, rhythmic jiggles. Think of a car ride, not a hammock.</li>
+        <li><strong>Suck.</strong> Breast, bottle, finger or pacifier. Sucking is deeply calming.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>Quick remedies by cause</h2>
+      <ul class="remedies">
+        <li><strong>Hungry:</strong> feed on cue. Cluster feeding in the evenings is normal.</li>
+        <li><strong>Gassy:</strong> bicycle legs, knees to tummy, tummy-down on your forearm, warm hand on the belly.</li>
+        <li><strong>Needs burping:</strong> over the shoulder, sitting upright leaning forward, or face-down across your lap. Switch positions if nothing comes.</li>
+        <li><strong>Tired:</strong> dark room, white noise, rhythmic motion. Watch wake windows: newborns tire after 45 to 90 minutes awake.</li>
+        <li><strong>Uncomfortable:</strong> diaper, clothing layers, room temperature (feel the chest, not the hands), awkward position, a hair around a finger or toe.</li>
+        <li><strong>Wants you:</strong> skin to skin, your voice, your heartbeat. Holding is a need, not a habit. You cannot spoil a newborn.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Calming yourself</h2>
+      <p>A crying baby is stressful, and that is normal. If you feel overwhelmed, put the baby safely on their back in the crib, walk away, and take a few slow breaths. A calm caregiver soothes faster. Never shake a baby, for any reason.</p>
+    </div>
+
+    <div class="card danger-card">
+      <h2>When to call your pediatrician</h2>
+      <ul>
+        <li>Fever of 100.4&deg;F (38&deg;C) or higher in a baby under 3 months: go to urgent care or the ER.</li>
+        <li>Trouble breathing, blue lips, or unusual limpness.</li>
+        <li>Crying inconsolably for 2 hours or more, or a cry that sounds completely unlike their usual cry.</li>
+        <li>Refusing feeds, very few wet diapers, vomiting or diarrhea with signs of dehydration.</li>
+        <li>Rash with fever, or a bulging fontanelle (soft spot).</li>
+        <li>An unusually weak cry, or a sudden lasting change in the cry.</li>
+        <li>You are worried. Parental instinct counts as a symptom.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ DIARY ============ -->
+  <section id="tab-diary" class="tab" aria-label="Cry diary">
+    <div class="card">
+      <h2>Cry diary</h2>
+      <p>Your notes make this smarter over time. Save what the cry sounded like, what you tried, and whether it worked.</p>
+      <div id="diary-summary" class="diary-summary"></div>
+    </div>
+    <div id="diary-list"></div>
+    <div class="card" id="diary-empty">
+      <p class="muted">No entries yet. Decode a cry on the first tab, then save it here with what worked.</p>
+      <button id="diary-clear" class="btn btn-ghost" hidden>Clear all entries</button>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar" aria-label="Main navigation">
+  <button class="tabbtn active" data-tab="decode">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg>
+    <span>Decode</span>
+  </button>
+  <button class="tabbtn" data-tab="learn">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg>
+    <span>Learn</span>
+  </button>
+  <button class="tabbtn" data-tab="soothe">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+    <span>Soothe</span>
+  </button>
+  <button class="tabbtn" data-tab="diary">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14a1 1 0 0 1 1 1v15l-3-2-3 2-3-2-3 2-3-2-1 .7V5a1 1 0 0 1 1-1z"/><path d="M9 9h6M9 13h6"/></svg>
+    <span>Diary</span>
+  </button>
+</nav>
+
+<div id="checklist-modal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="checklist-title">
+    <h2 id="checklist-title">The basics checklist</h2>
+    <p class="muted">Work top to bottom. Most cries end somewhere on this list.</p>
+    <div id="checklist-items"></div>
+    <button id="checklist-close" class="btn btn-primary">Done</button>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
