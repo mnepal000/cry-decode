@@ -122,18 +122,23 @@ function drawMeter() {
     }
     const w = meterCanvas.width, h = meterCanvas.height;
     meterCtx.clearRect(0, 0, w, h);
+    const bar = (x, bw) => {
+      if (meterCtx.roundRect) {
+        meterCtx.beginPath();
+        meterCtx.roundRect(x, 0, bw, h, 8);
+        meterCtx.fill();
+      } else {
+        meterCtx.fillRect(x, 0, bw, h);
+      }
+    };
     meterCtx.fillStyle = "#F1E8DC";
-    meterCtx.beginPath();
-    meterCtx.roundRect(0, 0, w, h, 8);
-    meterCtx.fill();
+    bar(0, w);
     const bw = Math.max(4, w * Math.min(1, peak * 1.6));
     const grad = meterCtx.createLinearGradient(0, 0, w, 0);
     grad.addColorStop(0, "#D9A441");
     grad.addColorStop(1, "#E07856");
     meterCtx.fillStyle = grad;
-    meterCtx.beginPath();
-    meterCtx.roundRect(0, 0, bw, h, 8);
-    meterCtx.fill();
+    bar(0, bw);
     meterRAF = requestAnimationFrame(loop);
   };
   loop();
