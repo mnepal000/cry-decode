@@ -1,5 +1,5 @@
 /* CryDecode app UI. All audio processing happens on-device. */
-import { analyzeCry } from "./cry-analysis.js";
+import { analyzeCry, analyzeBabble } from "./cry-analysis.js";
 
 /* ---------------- tabs ---------------- */
 const tabBtns = document.querySelectorAll(".tabbtn");
@@ -16,6 +16,36 @@ tabBtns.forEach(btn => {
 function goTab(name) {
   document.querySelector(`.tabbtn[data-tab="${name}"]`).click();
 }
+
+/* ---------------- cry / babble mode ---------------- */
+let mode = "cry";
+const modeBtns = document.querySelectorAll(".mode-btn");
+const cryIntro = document.getElementById("cry-intro");
+const babbleIntro = document.getElementById("babble-intro");
+const recordHint = document.getElementById("record-hint");
+const analyzingText = document.getElementById("analyzing-text");
+const HINTS = {
+  cry: "Hold your phone about an arm's length away. 5 to 15 seconds of crying is plenty. Recording stops automatically at 60 seconds.",
+  babble: "Record while your baby is chatting. 5 to 15 seconds of babbling is plenty. Recording stops automatically at 60 seconds."
+};
+modeBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    mode = btn.dataset.mode;
+    modeBtns.forEach(b => {
+      const on = b === btn;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    cryIntro.hidden = mode !== "cry";
+    babbleIntro.hidden = mode !== "babble";
+    recordHint.textContent = HINTS[mode];
+    analyzingText.innerHTML = mode === "cry"
+      ? "Listening to the patterns in the cry&hellip;"
+      : "Listening to the syllable patterns&hellip;";
+    hideResults();
+    clearError();
+  });
+});
 
 /* ---------------- helpers ---------------- */
 function esc(s) {
@@ -153,7 +183,9 @@ async function onRecordingStop() {
   const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
   chunks = [];
   if (blob.size < 2000) {
-    showError("That recording was too short to use. Try again and let it run for a few seconds of crying.");
+    showError(mode === "babble"
+      ? "That recording was too short to use. Try again and let it run for a few seconds of babbling."
+      : "That recording was too short to use. Try again and let it run for a few seconds of crying.");
     return;
   }
   await processAudioBlob(blob);
@@ -214,14 +246,17 @@ async function processAudioBlob(blob) {
     const rendered = await off.startRendering();
     const samples = rendered.getChannelData(0);
 
-    const result = analyzeCry(samples, 16000, 1);
+    const result = mode === "babble"
+      ? analyzeBabble(samples, 16000, 1)
+      : analyzeCry(samples, 16000, 1);
     analyzingEl.hidden = true;
     if (!result.ok) {
       showError(result.message);
       return;
     }
     lastResult = result;
-    renderResults(result);
+    if (mode === "babble") renderBabbleResults(result);
+    else renderResults(result);
   } catch (e) {
     analyzingEl.hidden = true;
     showError("I could not read that audio. Try recording directly, or upload an MP3, M4A or WAV file.");
@@ -308,6 +343,88 @@ function renderResults(result) {
   document.getElementById("open-checklist").addEventListener("click", openChecklist);
 }
 
+/* ---------------- babble results ---------------- */
+function renderBabbleResults(result) {
+  const top = result.stages[0];
+  let html = `
+    <div class="card result-top">
+      <span class="conf-pill conf-${result.confidence}">${CONF_LABEL[result.confidence]}</span>
+      <h2>Most like: ${esc(top.label)}</h2>
+      <p class="result-summary">${esc(result.summary)}</p>
+    </div>
+    <div class="card">
+      <h2>What the syllables suggest</h2>
+      <p class="hint">Pattern match score, not certainty. Every baby finds their voice on their own schedule.</p>`;
+
+  result.stages.forEach((s, i) => {
+    html += `
+      <div class="candidate">
+        <div class="cand-head">
+          <h3>${i + 1}. ${esc(s.label)} <span class="muted" style="font-size:0.85rem">${esc(s.typicalAge)}</span></h3>
+          <span class="cand-score">${s.score}</span>
+        </div>
+        <div class="score-bar"><div class="score-fill" style="width:${s.score}%"></div></div>
+        <p class="muted" style="font-size:0.9rem">${esc(s.tagline)}</p>`;
+    if (i === 0) {
+      html += `<p><strong>What this stage means:</strong> ${esc(s.whatItMeans)}</p>
+        <p style="margin-top:10px"><strong>What they might be telling you:</strong></p>
+        <ul class="try-list">${s.tellingYou.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+        <p style="margin-top:10px"><strong>How to respond:</strong></p>
+        <ul class="try-list">${s.respond.map(t => `<li>${esc(t)}</li>`).join("")}</ul>`;
+    }
+    html += `</div>`;
+  });
+
+  html += `
+    </div>
+    <div class="card">
+      <h2>Where the meaning lives</h2>
+      <p>At the babbling stage, the meaning is rarely in the syllables. Watch the body:</p>
+      <ul class="try-list">${result.contextGuide.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+    </div>`;
+
+  if (result.issues.length) {
+    html += result.issues.map(f => `<div class="issue-note">${esc(f)}</div>`).join("");
+  }
+
+  const ft = result.features;
+  html += `
+    <div class="card">
+      <details class="tech-details">
+        <summary>Technical details (for the curious)</summary>
+        <div class="tech-grid">
+          <span>Clip length</span><span>${ft.durationSec}s</span>
+          <span>Syllables</span><span>${ft.syllables}</span>
+          <span>Avg syllable</span><span>${ft.avgSyllableSec}s</span>
+          <span>Syllables/sec</span><span>${ft.syllablesPerSec}</span>
+          <span>Rhythm score</span><span>${ft.rhythmScore}</span>
+          <span>Repetition score</span><span>${ft.repetitionScore}</span>
+          <span>Variety score</span><span>${ft.varietyScore}</span>
+          <span>Median pitch</span><span>${ft.pitchMedianHz} Hz</span>
+        </div>
+      </details>
+    </div>
+    <div class="card">
+      <h2>Save to your diary</h2>
+      <p class="hint">Note what was happening, it makes your diary far more useful later.</p>
+      <input id="diary-note-input" type="text" placeholder="Quick note, e.g. babbled &quot;dadada&quot; at the dog" maxlength="140"
+        style="width:100%;padding:12px;border:1.5px solid #E4D9C8;border-radius:12px;font-size:0.95rem;margin-bottom:10px;">
+      <div class="result-actions">
+        <button id="save-diary" class="btn btn-primary">Save to diary</button>
+      </div>
+    </div>`;
+
+  resultsEl.innerHTML = html;
+  resultsEl.hidden = false;
+  resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  document.getElementById("save-diary").addEventListener("click", () => {
+    const note = document.getElementById("diary-note-input").value.trim();
+    saveDiaryEntry(result, note, "babble");
+    goTab("diary");
+  });
+}
+
 /* ---------------- diary ---------------- */
 const DIARY_KEY = "crydecode-diary-v1";
 
@@ -322,14 +439,17 @@ function storeDiary(entries) {
   localStorage.setItem(DIARY_KEY, JSON.stringify(entries));
 }
 
-function saveDiaryEntry(result, note) {
+function saveDiaryEntry(result, note, kind = "cry") {
   const entries = loadDiary();
+  const list = kind === "babble" ? result.stages : result.results;
+  const top = list[0];
   entries.unshift({
     ts: Date.now(),
-    topKey: result.results[0].key,
-    topLabel: result.results[0].label,
-    score: result.results[0].score,
-    runners: result.results.slice(1, 3).map(r => r.label).join(", "),
+    kind,
+    topKey: top.key,
+    topLabel: top.label,
+    score: top.score,
+    runners: list.slice(1, 3).map(r => r.label).join(", "),
     note: note || "",
     helped: null
   });
@@ -362,13 +482,16 @@ function renderDiary() {
     else if (e.helped === false) { helpedTotal++; }
   }
   const topPattern = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  const nCry = entries.filter(e => e.kind !== "babble").length;
+  const nBabble = entries.length - nCry;
   summary.innerHTML = `Most common pattern so far: <strong>${esc(topPattern[0])}</strong> (${topPattern[1]} of ${entries.length}).` +
+    (nCry && nBabble ? ` Logged: ${nCry} ${nCry === 1 ? "cry" : "cries"}, ${nBabble} ${nBabble === 1 ? "babble" : "babbles"}.` : "") +
     (helpedTotal ? ` Your saved suggestions helped <strong>${helpedYes} of ${helpedTotal}</strong> times.` : "");
 
   list.innerHTML = entries.map((e, i) => `
     <div class="card diary-entry">
       <div class="diary-meta">
-        <strong>${esc(e.topLabel)} <span class="muted">(${e.score})</span></strong>
+        <strong><span class="kind-pill ${e.kind === "babble" ? "babble" : ""}">${e.kind === "babble" ? "Babble" : "Cry"}</span>${esc(e.topLabel)} <span class="muted">(${e.score})</span></strong>
         <span class="diary-time">${fmtTime(e.ts)}</span>
       </div>
       ${e.runners ? `<p class="hint" style="margin:4px 0">Also considered: ${esc(e.runners)}</p>` : ""}

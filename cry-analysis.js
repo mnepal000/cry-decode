@@ -486,7 +486,11 @@ function extractFeatures(x) {
     contourSlope,
     crescendo,
     hyperFrac,
-    clipFrac
+    clipFrac,
+    // frame-level tracks, used by the babble analyzer for syllable segmentation
+    frameRms: Array.from(rms),
+    frameF0: Array.from(f0),
+    frameVoiced: voiced
   };
 }
 
@@ -676,8 +680,351 @@ export function analyzeCry(samples, sampleRate, channels = 1) {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* Babble analysis: syllable structure and talking stages             */
+/*                                                                    */
+/* A separate path from cry decoding. Babbling is quieter, made of    */
+/* short syllable-like units, and its "meaning" lives in context      */
+/* (pointing, gaze, reaching), not in the syllables themselves. So    */
+/* this analyzer reports the talking stage, what the stage means       */
+/* developmentally, and how to respond, rather than a translation.    */
+/* ------------------------------------------------------------------ */
+
+export const BABBLE_STAGES = {
+  cooing: {
+    label: "Cooing",
+    typicalAge: "typically 1 to 4 months",
+    tagline: "Long, vowel-like sounds: the first conversations.",
+    whatItMeans: "Your baby has discovered their voice. Cooing sounds are vowel-like and happen during calm, happy moments. This is social practice: the back-and-forth of conversation, months before words.",
+    tellingYou: [
+      "Contentment. Cooing mostly means \u201CI\u2019m happy, stay with me.\u201D",
+      "An invitation. When your baby coos at you and pauses, they are holding up their end of a chat.",
+      "If cooing suddenly stops and fussing starts, a need has arrived. That is a job for the Cry decoder."
+    ],
+    respond: [
+      "Coo back. Imitate the sound, then pause so they can \u201Canswer.\u201D",
+      "Narrate what they see: \u201CYou see the light! Yes, it\u2019s bright.\u201D",
+      "Talk through care routines. Diaper changes are language lessons."
+    ]
+  },
+  canonical: {
+    label: "Canonical babbling",
+    typicalAge: "typically 5 to 10 months",
+    tagline: "Repeated syllables like \u201Cbababa\u201D or \u201Cmamama\u201D.",
+    whatItMeans: "Your baby has discovered consonants. Repeating the same syllable over and over is how they learn the timing of speech. Most babies keep babbling right up to their first words.",
+    tellingYou: [
+      "Excitement and practice. Rhythmic babbling during play usually means joy, and \u201Cwatch what I can do.\u201D",
+      "\u201CMamama\u201D or \u201Cdadada\u201D while reaching or looking at you often means \u201Cyou!\u201D or \u201Cpick me up\u201D, but at first these are favorite syllables, not true names.",
+      "Babbling plus pointing is powerful: it means \u201Clook at that\u201D or \u201CI want that.\u201D"
+    ],
+    respond: [
+      "Copy their sounds back, then add a word: they say \u201Cbaba\u201D, you say \u201CYes! Bottle!\u201D",
+      "Follow their gaze and name whatever they look at.",
+      "Read every day, even now. Point at pictures and wait for their babbles."
+    ]
+  },
+  variegated: {
+    label: "Variegated babbling",
+    typicalAge: "typically 8 to 12 months",
+    tagline: "Mixed syllables like \u201Cbadagu\u201D: experimenting with your language\u2019s sounds.",
+    whatItMeans: "Your baby is varying consonants and vowels from syllable to syllable. This is a leap: they are tuning in to the sound patterns of the language around them, and this kind of babbling strongly predicts early words.",
+    tellingYou: [
+      "\u201CI\u2019m ready to talk with you.\u201D Varied babbling is an invitation to converse.",
+      "New sound combinations often show up right before first words.",
+      "If the babbling has a speech-like melody but no real words yet, they are rehearsing conversation itself: the rhythm, the pauses, the turn-taking."
+    ],
+    respond: [
+      "Treat it as real conversation. Respond, then wait for their turn.",
+      "Expand on their sounds: \u201CGagamee? Yes, the doggy says woof!\u201D",
+      "Sing songs with gestures. Music trains the same timing as speech."
+    ]
+  },
+  jargon: {
+    label: "Jargon talking",
+    typicalAge: "typically 10 to 18 months",
+    tagline: "Long speech-like streams with melody, but no real words yet.",
+    whatItMeans: "Your baby is rehearsing full conversation: adult-like stress, intonation, and pauses, without the vocabulary. Children often keep using jargon even after their first real words appear.",
+    tellingYou: [
+      "\u201CTalk with me!\u201D Jargon with eye contact is a bid for conversation.",
+      "The melody carries the intent: rising jargon often asks, firm falling jargon often declares.",
+      "Mixed with pointing, jargon can comment on or request specific things."
+    ],
+    respond: [
+      "Answer as if you understood, then model the words: \u201COh really? Tell me more about the truck.\u201D",
+      "Keep turns short. They lead, you follow.",
+      "Name things they point at, every time. Repetition builds words."
+    ]
+  },
+  wordlike: {
+    label: "Word-like babble",
+    typicalAge: "often just before first words",
+    tagline: "Short, consistent sound shapes used like words.",
+    whatItMeans: "Your baby is using the same sound shape for the same thing, like \u201Cba\u201D every time the ball appears. These consistent sound shapes are sometimes called protowords, and they are the bridge to first real words, usually around 12 months.",
+    tellingYou: [
+      "Something specific. Watch what they look at, point to, or reach for when they make the sound.",
+      "If the same sound keeps appearing in the same situation, give it the word: \u201CYes! Ball!\u201D",
+      "Common early shapes: \u201Cba\u201D (ball, bottle, bye), \u201Cda\u201D (dog, dad, doll), \u201Cuh-oh\u201D, \u201Chi\u201D."
+    ],
+    respond: [
+      "Repeat their sound, then say the real word clearly.",
+      "Celebrate it. Big reactions teach them that sounds have power.",
+      "Keep a list in your diary. Watching protowords turn into words is the best part."
+    ]
+  }
+};
+
+export const BABBLE_ORDER = ["cooing", "canonical", "variegated", "jargon", "wordlike"];
+
+// Shared context guidance: at the babbling stage, meaning lives in the body.
+export const BABBLE_CONTEXT_GUIDE = [
+  "Pointing plus babble usually means \u201Clook at that\u201D or \u201CI want that.\u201D",
+  "Reaching plus babble usually means \u201Cpick me up.\u201D",
+  "Babbling at a toy means \u201Cthis is interesting.\u201D",
+  "The sounds are practice. The message is in the eyes and hands."
+];
+
+function segmentSyllables(frameRms, frameVoiced, fps) {
+  const nF = frameRms.length;
+  // smooth the energy envelope (~50 ms moving average)
+  const sm = new Float32Array(nF);
+  for (let f = 0; f < nF; f++) {
+    let s = 0, c = 0;
+    for (let k = -2; k <= 2; k++) {
+      const j = f + k;
+      if (j >= 0 && j < nF) { s += frameRms[j]; c++; }
+    }
+    sm[f] = s / c;
+  }
+  let gmax = 0;
+  for (let f = 0; f < nF; f++) if (sm[f] > gmax) gmax = sm[f];
+  if (gmax < 1e-4) return [];
+  const thresh = Math.max(gmax * 0.22, 0.003);
+  // peak picking, at least 120 ms apart
+  const peaks = [];
+  const minDist = Math.max(8, Math.round(0.12 * fps));
+  for (let f = 1; f < nF - 1; f++) {
+    if (sm[f] > thresh && sm[f] >= sm[f - 1] && sm[f] > sm[f + 1]) {
+      const last = peaks[peaks.length - 1];
+      if (last !== undefined && f - last < minDist) {
+        if (sm[f] > sm[last]) peaks[peaks.length - 1] = f;
+      } else {
+        peaks.push(f);
+      }
+    }
+  }
+  // expand each peak into a syllable region
+  const syls = [];
+  for (const p of peaks) {
+    const pv = sm[p];
+    let s = p, e = p;
+    while (s > 0 && sm[s - 1] > pv * 0.35) s--;
+    while (e < nF - 1 && sm[e + 1] > pv * 0.35) e++;
+    syls.push({ start: s, end: e + 1 });
+  }
+  syls.sort((a, b) => a.start - b.start);
+  const merged = [];
+  for (const sy of syls) {
+    const last = merged[merged.length - 1];
+    if (last && sy.start <= last.end + 2) {
+      last.end = Math.max(last.end, sy.end);
+    } else {
+      merged.push({ start: sy.start, end: sy.end });
+    }
+  }
+  // drop fragments under 80 ms
+  return merged.filter(sy => (sy.end - sy.start) / fps >= 0.08);
+}
+
+function syllableFeatures(x, syls, frameF0, frameVoiced, fps) {
+  const H = Math.floor(TARGET_SR * HOP_MS / 1000); // 160 samples
+  const cframe = new Float32Array(256);
+  return syls.map(sy => {
+    let fsum = 0, fn = 0, fmin = Infinity, fmax = 0;
+    let csum = 0, cn = 0;
+    for (let f = sy.start; f < sy.end; f++) {
+      if (frameVoiced[f] && frameF0[f] > 0) {
+        fsum += frameF0[f]; fn++;
+        if (frameF0[f] < fmin) fmin = frameF0[f];
+        if (frameF0[f] > fmax) fmax = frameF0[f];
+      }
+      if (f % 2 === 0) {
+        const off = f * H;
+        if (off + 256 <= x.length) {
+          for (let i = 0; i < 256; i++) cframe[i] = x[off + i];
+          csum += spectralCentroid(cframe);
+          cn++;
+        }
+      }
+    }
+    return {
+      dur: (sy.end - sy.start) / fps,
+      onset: sy.start / fps,
+      f0mean: fn > 0 ? fsum / fn : 0,
+      f0range: fn > 0 ? fmax - fmin : 0,
+      centroid: cn > 0 ? csum / cn : 0
+    };
+  });
+}
+
+function scoreBabbleStages(B) {
+  const { nSyl, avgSylDur, totalSpeechSec, syllableRate, onsetRhythm,
+          repScore, varScore, meanF0, f0RangeUtt, longVowelFrac } = B;
+  const scores = {};
+  scores.cooing =
+    0.45 * ramp(longVowelFrac, 0.3, 0.8) +
+    0.25 * (1 - ramp(nSyl, 4, 7)) +
+    0.15 * band(meanF0, 220, 420, 60) +
+    0.15 * (1 - ramp(syllableRate, 1.5, 3.0));
+  scores.canonical =
+    0.30 * ramp(nSyl, 3, 6) +
+    0.35 * ramp(repScore, 0.6, 0.9) +
+    0.20 * onsetRhythm +
+    0.15 * (1 - varScore);
+  scores.variegated =
+    0.25 * band(nSyl, 3, 7, 1.5) +
+    0.40 * varScore +
+    0.20 * ramp(totalSpeechSec, 1.5, 4.0) +
+    0.15 * onsetRhythm;
+  scores.jargon =
+    0.40 * ramp(nSyl, 4, 8) +
+    0.30 * ramp(totalSpeechSec, 1.5, 4.0) +
+    0.30 * ramp(f0RangeUtt, 80, 250);
+  scores.wordlike =
+    0.40 * band(nSyl, 1, 2, 0.6) +
+    0.30 * band(avgSylDur, 0.15, 0.6, 0.1) +
+    0.30 * ramp(repScore, 0.4, 0.8);
+  return scores;
+}
+
+export function analyzeBabble(samples, sampleRate, channels = 1) {
+  const issues = [];
+  let x = toMono16k(samples, sampleRate, channels);
+  if (x.length < TARGET_SR * 1.5) {
+    return { ok: false, reason: "too_short", message: "That clip is under 1.5 seconds. Record 5 to 15 seconds of babbling for a useful read." };
+  }
+  const maxLen = TARGET_SR * 60;
+  if (x.length > maxLen) x = x.slice(0, maxLen);
+
+  x = removeDC(x);
+  let rawClip = 0;
+  for (let i = 0; i < x.length; i++) if (Math.abs(x[i]) >= 0.98) rawClip++;
+  const rawClipFrac = rawClip / x.length;
+  let peak = 0;
+  for (let i = 0; i < x.length; i++) peak = Math.max(peak, Math.abs(x[i]));
+  if (peak < 1e-4) {
+    return { ok: false, reason: "silent", message: "That clip is nearly silent. Try recording closer to your baby in a quieter room." };
+  }
+  const norm = new Float32Array(x.length);
+  for (let i = 0; i < x.length; i++) norm[i] = x[i] / peak;
+
+  const F = extractFeatures(norm);
+  F.clipFrac = rawClipFrac;
+  if (F.tooShort) {
+    return { ok: false, reason: "too_short", message: "That clip is too short to analyze. Aim for 5 to 15 seconds of babbling." };
+  }
+  if (F.voicedRatio < 0.08) {
+    return {
+      ok: false, reason: "no_babble",
+      message: "I could not find voice sounds in that clip. It may be mostly background noise. Try holding the phone closer while your baby is babbling or chatting."
+    };
+  }
+
+  const syls = segmentSyllables(F.frameRms, F.frameVoiced, F.fps);
+  if (syls.length === 0) {
+    return {
+      ok: false, reason: "no_babble",
+      message: "I could not pick out syllable-like sounds in that clip. Babbling has a bouncy, broken-up rhythm. Try a clip with more of that chatty sound."
+    };
+  }
+  const sfeat = syllableFeatures(norm, syls, F.frameF0, F.frameVoiced, F.fps);
+
+  const nSyl = sfeat.length;
+  const durs = sfeat.map(s => s.dur);
+  const avgSylDur = mean(durs);
+  const totalSpeechSec = durs.reduce((a, b) => a + b, 0);
+  const durSec = F.durSec;
+  const syllableRate = nSyl / Math.max(durSec, 0.5);
+  const onsets = sfeat.map(s => s.onset);
+  let onsetRhythm = 0;
+  if (nSyl >= 3) {
+    const iois = [];
+    for (let i = 1; i < onsets.length; i++) iois.push(onsets[i] - onsets[i - 1]);
+    const m = mean(iois), sd = std(iois, m);
+    onsetRhythm = m > 0 ? Math.max(0, 1 - Math.min(1, sd / m)) : 0;
+  }
+  const cents = sfeat.map(s => s.centroid).filter(c => c > 0);
+  const centMean = cents.length ? mean(cents) : 0;
+  const centCV = cents.length && centMean > 0 ? std(cents, centMean) / centMean : 0;
+  const repScore = Math.max(0, 1 - Math.min(1, centCV / 0.25));
+  const f0means = sfeat.map(s => s.f0mean).filter(v => v > 0);
+  const f0MeanAll = f0means.length ? mean(f0means) : F.f0Med;
+  const f0Spread = f0means.length ? (Math.max(...f0means) - Math.min(...f0means)) : 0;
+  const varScore = 0.7 * Math.min(1, centCV / 0.22) +
+                   0.3 * Math.min(1, f0Spread / 200);
+  const f0RangeUtt = f0means.length ? (Math.max(...f0means) - Math.min(...f0means)) : 0;
+  const longVowelFrac = durs.filter(d => d > 0.5).length / nSyl;
+
+  const B = { nSyl, avgSylDur, totalSpeechSec, syllableRate, onsetRhythm,
+              repScore, varScore, meanF0: f0MeanAll, f0RangeUtt, longVowelFrac };
+
+  // Cry check: high loud wails are a job for the Cry decoder, not this one.
+  if (f0MeanAll > 550 && avgSylDur > 0.5) {
+    issues.push("This sounds more like crying than babbling. Switch to Cry mode for a needs analysis.");
+  }
+  if (F.durSec < 3) issues.push("Very short clip. A longer recording gives a more reliable read.");
+  if (rawClipFrac > 0.02) issues.push("The recording was very loud and clipped. Hold the phone a little farther next time.");
+
+  const scores = scoreBabbleStages(B);
+  const ranked = BABBLE_ORDER
+    .map(key => ({ key, score: scores[key] }))
+    .sort((a, b) => b.score - a.score);
+
+  const top = ranked[0];
+  const confidence = top.score >= 0.55 ? "likely"
+    : top.score >= 0.35 ? "possible" : "unclear";
+
+  const stages = ranked.slice(0, 3).map(r => {
+    const meta = BABBLE_STAGES[r.key];
+    return {
+      key: r.key,
+      label: meta.label,
+      score: Math.round(r.score * 100),
+      typicalAge: meta.typicalAge,
+      tagline: meta.tagline,
+      whatItMeans: meta.whatItMeans,
+      tellingYou: meta.tellingYou,
+      respond: meta.respond
+    };
+  });
+
+  const features = {
+    durationSec: Math.round(durSec * 10) / 10,
+    syllables: nSyl,
+    avgSyllableSec: Math.round(avgSylDur * 100) / 100,
+    syllablesPerSec: Math.round(syllableRate * 100) / 100,
+    rhythmScore: Math.round(onsetRhythm * 100) / 100,
+    repetitionScore: Math.round(repScore * 100) / 100,
+    varietyScore: Math.round(varScore * 100) / 100,
+    pitchMedianHz: Math.round(f0MeanAll)
+  };
+
+  return {
+    ok: true,
+    kind: "babble",
+    confidence,
+    summary: confidence === "unclear"
+      ? "This clip did not match a talking stage clearly. Every baby finds their voice on their own schedule. Try a longer, chattier clip."
+      : "The syllable patterns look most like " + BABBLE_STAGES[top.key].label.toLowerCase() + " (" + BABBLE_STAGES[top.key].typicalAge + "). This is a pattern match, not an assessment. You know your baby best.",
+    stages,
+    contextGuide: BABBLE_CONTEXT_GUIDE,
+    issues,
+    features
+  };
+}
+
 /* Export internals for tests */
 export const _internals = {
   ramp, band, median, percentile, mean, std,
-  pitchACF, spectralCentroid, segmentBouts, extractFeatures, scoreAll
+  pitchACF, spectralCentroid, segmentBouts, extractFeatures, scoreAll,
+  segmentSyllables, syllableFeatures, scoreBabbleStages
 };
