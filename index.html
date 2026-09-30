@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#FBF6EF">
-<meta name="description" content="CryDecode: a listening helper that analyzes your baby's cry patterns and babbling stages, and suggests what your baby might need or be practicing. 100% on-device, private by design.">
+<meta name="description" content="CryDecode: a listening helper that analyzes your newborn's cry patterns and suggests what your baby might need. 100% on-device, private by design.">
 <title>CryDecode, understand your baby's cries</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23E07856'/%3E%3Cg stroke='%23FFF6EC' stroke-width='4' stroke-linecap='round'%3E%3Cline x1='14' y1='26' x2='14' y2='38'/%3E%3Cline x1='24' y1='20' x2='24' y2='44'/%3E%3Cline x1='34' y1='14' x2='34' y2='50'/%3E%3Cline x1='44' y1='22' x2='44' y2='42'/%3E%3Cline x1='52' y1='28' x2='52' y2='36'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
@@ -18,7 +18,7 @@
     </span>
     <div>
       <h1>CryDecode</h1>
-      <p>A listening helper for cries and babbles</p>
+      <p>A listening helper for newborn cries</p>
     </div>
   </div>
 </header>
@@ -26,19 +26,9 @@
 <main>
   <!-- ============ DECODE ============ -->
   <section id="tab-decode" class="tab active" aria-label="Decode a cry">
-    <div class="card intro-card" id="cry-intro">
+    <div class="card intro-card">
       <p class="lede">Record your baby's cry and CryDecode will analyze its sound patterns, pitch, rhythm and intensity, and suggest what your baby might need.</p>
       <p class="honest">It is a pattern match, not a diagnosis. You know your baby best.</p>
-    </div>
-
-    <div class="card intro-card" id="babble-intro" hidden>
-      <p class="lede">Record your baby's babbling and CryDecode will listen to the syllable patterns and suggest which talking stage they're in: cooing, babbling, jargon, or word-like sounds.</p>
-      <p class="honest">At this age, the meaning is rarely in the syllables. Watch the body: pointing, gaze, and reaching. The sounds are practice; the message is in the eyes and hands.</p>
-    </div>
-
-    <div class="mode-toggle" role="group" aria-label="What are you recording?">
-      <button class="mode-btn active" data-mode="cry" aria-pressed="true">Crying</button>
-      <button class="mode-btn" data-mode="babble" aria-pressed="false">Babbling</button>
     </div>
 
     <div class="card record-card">
@@ -50,7 +40,7 @@
         <div id="record-timer" class="record-timer" hidden>0:00</div>
         <canvas id="level-meter" width="260" height="36" hidden aria-hidden="true"></canvas>
       </div>
-      <p class="hint" id="record-hint">Hold your phone about an arm's length away. 5 to 15 seconds of crying is plenty. Recording stops automatically at 60 seconds.</p>
+      <p class="hint">Hold your phone about an arm's length away. 5 to 15 seconds of crying is plenty. Recording stops automatically at 60 seconds.</p>
       <div class="upload-row">
         <label class="linklike" for="file-input">Or upload an audio file instead</label>
         <input type="file" id="file-input" accept="audio/*" hidden>
@@ -60,7 +50,7 @@
 
     <div id="analyzing" class="card analyzing" hidden>
       <div class="pulse-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-      <p id="analyzing-text">Listening to the patterns in the cry&hellip;</p>
+      <p>Listening to the patterns in the cry&hellip;</p>
     </div>
 
     <div id="results" hidden></div>
@@ -75,7 +65,7 @@
       <summary>How it works, privacy and sources</summary>
       <div class="about-body">
         <h3>How it works</h3>
-        <p>CryDecode measures the cry the way researchers do: fundamental pitch and its range, how the pitch moves (rising, falling, wavering), loudness dynamics, the rhythm of cry bursts and pauses, and voice harshness. It compares those measurements against acoustic patterns described in infant cry research and the popular Dunstan five-sound framework, then shows the closest matches with the reasons. In Babbling mode it instead measures syllable patterns: how many syllables, how rhythmic and repetitive they are, and how varied their sounds are, to suggest which talking stage your baby is in.</p>
+        <p>CryDecode measures the cry the way researchers do: fundamental pitch and its range, how the pitch moves (rising, falling, wavering), loudness dynamics, the rhythm of cry bursts and pauses, and voice harshness. It compares those measurements against acoustic patterns described in infant cry research and the popular Dunstan five-sound framework, then shows the closest matches with the reasons.</p>
         <h3>Privacy</h3>
         <p>Everything happens on your device. The microphone is only active while you record, audio is never uploaded anywhere, and your diary is stored only in this browser. There is no account and no server. Once the page has loaded the first time, it is saved on your device and keeps working offline, handy for night feeds with no signal.</p>
         <h3>Honesty</h3>
@@ -136,70 +126,6 @@
     </div>
 
     <div class="card">
-      <h2>Babbling and first words</h2>
-      <p>From about 2 months, babies start practicing the sounds of speech, and by 6 to 10 months most are babbling in earnest. CryDecode's Babbling mode listens to syllable patterns and suggests which talking stage your baby is in. Stages overlap and every baby moves at their own pace.</p>
-      <p class="honest">This is a developmental guide, not an assessment. If you are ever worried about your baby's hearing or talking, ask your pediatrician early. Early help works best.</p>
-    </div>
-
-    <div class="card sound-card">
-      <div class="sound-head"><span class="sound-chip">coo</span><div><h3>Cooing</h3><p class="sound-sub">Around 1 to 4 months</p></div></div>
-      <p><strong>What to listen for:</strong> long, vowel-like &ldquo;ooo&rdquo; and &ldquo;ahh&rdquo; sounds, made when calm and content.</p>
-      <p><strong>What they're telling you:</strong> &ldquo;I'm happy, stay with me.&rdquo; Cooing at you with pauses is an invitation to chat.</p>
-      <p><strong>Try:</strong> coo back, then pause so they can &ldquo;answer.&rdquo; Narrate what they see.</p>
-    </div>
-
-    <div class="card sound-card">
-      <div class="sound-head"><span class="sound-chip">bababa</span><div><h3>Canonical babbling</h3><p class="sound-sub">Around 5 to 10 months</p></div></div>
-      <p><strong>What to listen for:</strong> the same syllable repeated rhythmically: &ldquo;bababa&rdquo;, &ldquo;mamama&rdquo;, &ldquo;dadada&rdquo;.</p>
-      <p><strong>What they're telling you:</strong> practice and excitement. &ldquo;Mamama&rdquo; while reaching usually means &ldquo;you!&rdquo; or &ldquo;pick me up,&rdquo; but at first these are favorite syllables, not true names.</p>
-      <p><strong>Try:</strong> copy their sounds, then add a word: &ldquo;baba&rdquo; becomes &ldquo;Yes! Bottle!&rdquo;</p>
-    </div>
-
-    <div class="card sound-card">
-      <div class="sound-head"><span class="sound-chip">badagu</span><div><h3>Variegated babbling</h3><p class="sound-sub">Around 8 to 12 months</p></div></div>
-      <p><strong>What to listen for:</strong> syllables that change from one to the next: &ldquo;badagu&rdquo;, &ldquo;gagamee&rdquo;.</p>
-      <p><strong>What they're telling you:</strong> &ldquo;I'm ready to talk with you.&rdquo; New sound combinations often appear right before first words.</p>
-      <p><strong>Try:</strong> treat it as real conversation. Respond, then wait for their turn.</p>
-    </div>
-
-    <div class="card sound-card">
-      <div class="sound-head"><span class="sound-chip">jargon</span><div><h3>Jargon talking</h3><p class="sound-sub">Around 10 to 18 months</p></div></div>
-      <p><strong>What to listen for:</strong> long streams with adult-like melody and pauses, but no real words.</p>
-      <p><strong>What they're telling you:</strong> &ldquo;Talk with me!&rdquo; The melody carries the intent: rising jargon often asks, firm falling jargon often declares.</p>
-      <p><strong>Try:</strong> answer as if you understood, then model the words: &ldquo;Oh really? Tell me more about the truck.&rdquo;</p>
-    </div>
-
-    <div class="card sound-card">
-      <div class="sound-head"><span class="sound-chip">ba!</span><div><h3>Word-like sounds</h3><p class="sound-sub">Often just before first words</p></div></div>
-      <p><strong>What to listen for:</strong> the same short sound used for the same thing, like &ldquo;ba&rdquo; every time the ball appears.</p>
-      <p><strong>What they're telling you:</strong> something specific. Watch what they look at or point to when they make the sound, then give it the word: &ldquo;Yes! Ball!&rdquo;</p>
-      <p><strong>Try:</strong> repeat their sound, then say the real word clearly. Keep a list in your diary.</p>
-    </div>
-
-    <div class="card">
-      <h2>How to grow a talker</h2>
-      <ul class="remedies">
-        <li><strong>Serve and return.</strong> They babble, you answer, then wait. Conversation is turn-taking.</li>
-        <li><strong>Imitate, then expand.</strong> Copy their sound, then add a word: &ldquo;baba&rdquo; becomes &ldquo;Yes! Bottle!&rdquo;</li>
-        <li><strong>Follow their lead.</strong> Name whatever they look at or point to, every time.</li>
-        <li><strong>Read every day,</strong> even at 6 months. Point at pictures and leave pauses for their babbles.</li>
-        <li><strong>Narrate your day</strong> in short sentences. Diaper changes are language lessons.</li>
-      </ul>
-    </div>
-
-    <div class="card">
-      <h2>Talking milestones</h2>
-      <p>A rough guide, based on CDC milestones (2022 update). Every child develops at their own pace, and these mark when most children reach each step.</p>
-      <ul class="remedies">
-        <li><strong>By 9 months:</strong> babbling like &ldquo;mamama&rdquo; and &ldquo;bababa&rdquo;.</li>
-        <li><strong>By 12 months:</strong> says &ldquo;mama&rdquo; or &ldquo;dada&rdquo;.</li>
-        <li><strong>By 15 months:</strong> tries one or two words besides &ldquo;mama&rdquo; or &ldquo;dada&rdquo;.</li>
-        <li><strong>By 18 months:</strong> tries three or more words besides &ldquo;mama&rdquo; or &ldquo;dada&rdquo;.</li>
-      </ul>
-      <p><strong>Talk to your pediatrician if:</strong> no babbling by 9 months; no single words by 16 months; loss of any skill they once had; or you are worried. Parental concern is reason enough on its own.</p>
-    </div>
-
-    <div class="card">
       <h2>Your baby's own language</h2>
       <p>The most reliable decoder is the one you build yourself. Over weeks you will learn <em>your</em> baby's hungry cry versus tired cry. After each decode, save what you tried and whether it worked in the Diary tab. Patterns will emerge, and that diary becomes more accurate than any app.</p>
     </div>
@@ -253,13 +179,13 @@
   <!-- ============ DIARY ============ -->
   <section id="tab-diary" class="tab" aria-label="Cry diary">
     <div class="card">
-      <h2>Sound diary</h2>
-      <p>Your notes make this smarter over time. Save what a cry or babble sounded like, what you tried, and whether it worked.</p>
+      <h2>Cry diary</h2>
+      <p>Your notes make this smarter over time. Save what the cry sounded like, what you tried, and whether it worked.</p>
       <div id="diary-summary" class="diary-summary"></div>
     </div>
     <div id="diary-list"></div>
     <div class="card" id="diary-empty">
-      <p class="muted">No entries yet. Decode a cry or a babble on the first tab, then save it here with what worked.</p>
+      <p class="muted">No entries yet. Decode a cry on the first tab, then save it here with what worked.</p>
       <button id="diary-clear" class="btn btn-ghost" hidden>Clear all entries</button>
     </div>
   </section>
